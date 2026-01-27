@@ -1,16 +1,8 @@
 'use client';
 import Image from 'next/image';
-import UserStatus, { User } from './userStatus';
+import UserStatus from './userStatus';
 
 const GlobalHeader = () => {
-    // TODO: 这里的 user 信息后续可以接入真实的登录态
-    const user: User | null = null;
-
-    const handleLogin = () => {
-        // TODO: 在这里触发实际的登录逻辑（弹出登录框 / 跳转登录页等）
-        console.log('登录按钮被点击');
-    };
-
     return (
         <header className="flex h-20 items-center justify-between bg-white px-8 shadow-md">
             {/* 左侧区域：Logo + 标题 */}
@@ -24,7 +16,7 @@ const GlobalHeader = () => {
 
             {/* 右侧区域：用户状态 */}
             <div>
-                <UserStatus user={user} onLogin={handleLogin} />
+                <UserStatus />
             </div>
         </header>
     );

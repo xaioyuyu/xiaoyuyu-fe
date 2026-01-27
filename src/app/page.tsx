@@ -87,7 +87,7 @@ export default function Home() {
                   <div className="h-2 w-[26%] rounded-full bg-emerald-300" />
                 </div>
               </div>
-              <div>
+    <div>
                 <div className="mb-1 flex justify-between text-[11px] text-slate-500">
                   <span>其他</span>
                   <span>18%</span>

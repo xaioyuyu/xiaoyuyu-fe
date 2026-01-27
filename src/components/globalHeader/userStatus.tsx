@@ -2,21 +2,24 @@
 
 import Image from 'next/image';
 import { Button } from 'antd';
-
-export type User = {
-    username: string;
-    avatarUrl?: string;
-};
-
-type UserStatusProps = {
-    user: User | null;
-    onLogin?: () => void;
-};
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/features/auth/hooks';
 
 // 右侧用户状态子组件
-const UserStatus = ({ user, onLogin }: UserStatusProps) => {
+const UserStatus = () => {
+    const router = useRouter();
+    const { user, isAuthenticated, logout, loading } = useAuth();
+
+    const handleGoAuth = () => {
+        router.push('/auth');
+    };
+
+    const handleLogout = async () => {
+        await logout();
+    };
+
     // 已登录状态
-    if (user) {
+    if (isAuthenticated && user) {
         return (
             <div className="flex items-center gap-3">
                 {user.avatarUrl && (
@@ -29,18 +32,20 @@ const UserStatus = ({ user, onLogin }: UserStatusProps) => {
                     />
                 )}
                 <span className="text-sm text-gray-700">{user.username}</span>
+                <Button size="small" type="link" onClick={handleLogout} loading={loading}>
+                    退出登录
+                </Button>
             </div>
         );
     }
 
     // 未登录状态
     return (
-        <Button type="primary" onClick={onLogin}>
-            登录
+        <Button type="primary" onClick={handleGoAuth}>
+            登录 / 注册
         </Button>
     );
 };
 
 export default UserStatus;
-
 
