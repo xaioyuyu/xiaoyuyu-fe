@@ -21,7 +21,7 @@ type LoginFormValues = {
 const AuthPage = () => {
   const [activeKey, setActiveKey] = useState<'login' | 'register'>('login');
   const router = useRouter();
-  const { login, register, loading, error, clearError, user, isAuthenticated } = useAuth();
+  const { login, register, loading, error, clearError } = useAuth();
 
   const handleLoginFinish = async (values: LoginFormValues) => {
     try {
@@ -31,6 +31,8 @@ const AuthPage = () => {
       router.push('/');
     } catch {
       // 错误信息已在状态中存储并可通过 error 展示
+      console.error('login error', error);
+      message.error('登录失败');
     }
   };
 
@@ -42,6 +44,8 @@ const AuthPage = () => {
       router.push('/');
     } catch {
       // 错误信息已在状态中存储并可通过 error 展示
+      console.error('register error', error);
+      message.error('注册失败');
     }
   };
 
@@ -72,11 +76,6 @@ const AuthPage = () => {
           <Form.Item name="remember" valuePropName="checked">
             <Checkbox>记住我</Checkbox>
           </Form.Item>
-          {error && (
-            <div className="mb-3 text-xs text-red-500">
-              {error}
-            </div>
-          )}
           <Form.Item>
             <Button
               type="primary"
@@ -123,11 +122,6 @@ const AuthPage = () => {
           >
             <Input.Password placeholder="请输入密码" />
           </Form.Item>
-          {error && (
-            <div className="mb-3 text-xs text-red-500">
-              {error}
-            </div>
-          )}
           <Form.Item>
             <Button
               type="primary"
@@ -144,19 +138,14 @@ const AuthPage = () => {
   ];
 
   return (
-    <div className="flex h-full items-center justify-center bg-slate-50 px-4">
+    <div className="flex flex-1 items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-md">
-        <h1 className="mb-2 text-center text-xl font-semibold text-slate-900">
+        <h2 className="mb-2 text-center text-xl font-semibold text-slate-900">
           智能化个人记账与消费分析系统
-        </h1>
+        </h2>
         <p className="mb-4 text-center text-xs text-slate-500">
           登录或注册后，开始管理你的收支与消费分析
         </p>
-        {isAuthenticated && user && (
-          <div className="mb-4 text-center text-sm text-emerald-600">
-            当前登录用户：<span className="font-semibold">{user.username}</span>
-          </div>
-        )}
         <Tabs
           activeKey={activeKey}
           onChange={(key) => {

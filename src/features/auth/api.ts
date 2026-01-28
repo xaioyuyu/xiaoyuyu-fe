@@ -1,4 +1,4 @@
-import http from '@/lib/http/request';
+import { httpRequest } from '@/lib/http/request';
 import type { AuthUser } from './types';
 
 export type RegisterPayload = {
@@ -12,23 +12,39 @@ export type LoginPayload = {
     password: string;
 };
 
+// 定义的data
 export type AuthResponse = {
     user: AuthUser;
-    token: string;
 };
 
+// export type AuthResponse = ApiResponse<AuthUser>;
+
 const register = async (payload: RegisterPayload): Promise<AuthResponse> => {
-    const response = await http.post<AuthResponse>('/api/register', payload);
-    return response.data;
+    // httpRequest<AuthUser> 返回 ApiResponse<AuthUser>，即 AuthResponse
+    const response = await httpRequest<AuthResponse>({
+        url: '/api/register',
+        method: 'POST',
+        data: payload,
+    });
+    return response;
 };
 
 const login = async (payload: LoginPayload): Promise<AuthResponse> => {
-    const response = await http.post<AuthResponse>('/api/login', payload);
-    return response.data;
+    // httpRequest<AuthUser> 返回 ApiResponse<AuthUser>，即 AuthResponse
+    const response = await httpRequest<AuthResponse>({
+        url: '/api/login',
+        method: 'POST',
+        data: payload,
+    });
+    return response;
 };
 
 const logout = async (): Promise<void> => {
-    await http.post<void>('/api/logout');
+    // logout 接口通常不需要返回数据，传入 void 类型
+    await httpRequest<void>({
+        url: '/api/logout',
+        method: 'POST',
+    });
 };
 
 export const authApi = {

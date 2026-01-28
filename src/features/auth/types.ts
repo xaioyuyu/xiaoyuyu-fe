@@ -7,5 +7,3 @@ export type AuthUser = {
     email: string;
     avatarUrl?: string;
 };
-
-

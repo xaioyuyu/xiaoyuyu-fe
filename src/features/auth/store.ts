@@ -22,7 +22,6 @@ const STORAGE_KEY = 'auth';
 
 type PersistPayload = {
     user: AuthUser;
-    token: string;
 };
 
 const persistAuth = (payload: PersistPayload | null) => {
@@ -40,7 +39,7 @@ export const login = createAsyncThunk<AuthResponse, LoginPayload, { rejectValue:
         try {
             const res = await authApi.login(payload);
             if (typeof window !== 'undefined') {
-                persistAuth({ user: res.user, token: res.token });
+                persistAuth({ user: res.user });
             }
             return res;
         } catch (error: unknown) {
@@ -56,7 +55,7 @@ export const register = createAsyncThunk<AuthResponse, RegisterPayload, { reject
         try {
             const res = await authApi.register(payload);
             if (typeof window !== 'undefined') {
-                persistAuth({ user: res.user, token: res.token });
+                persistAuth({ user: res.user });
             }
             return res;
         } catch (error: unknown) {
@@ -90,7 +89,6 @@ const authSlice = createSlice({
                 return;
             }
             state.user = action.payload.user;
-            state.token = action.payload.token;
             state.isAuthenticated = true;
         },
         clearError(state: AuthState) {
@@ -106,7 +104,6 @@ const authSlice = createSlice({
             .addCase(login.fulfilled, (state: AuthState, action: PayloadAction<AuthResponse>) => {
                 state.loading = false;
                 state.user = action.payload.user;
-                state.token = action.payload.token;
                 state.isAuthenticated = true;
                 state.error = null;
             })
@@ -124,7 +121,6 @@ const authSlice = createSlice({
             .addCase(register.fulfilled, (state: AuthState, action: PayloadAction<AuthResponse>) => {
                 state.loading = false;
                 state.user = action.payload.user;
-                state.token = action.payload.token;
                 state.isAuthenticated = true;
                 state.error = null;
             })

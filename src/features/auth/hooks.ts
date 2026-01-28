@@ -14,13 +14,12 @@ export const useAuth = () => {
         const stored = window.localStorage.getItem('auth');
         if (!stored) return;
         try {
-            const parsed = JSON.parse(stored) as { user: unknown; token: string };
-            if (parsed.user && parsed.token) {
+            const parsed = JSON.parse(stored) as { user: unknown };
+            if (parsed.user) {
                 dispatch(
                     hydrateFromStorage({
                         // 这里类型在 slice 中已经约束为 AuthUser，假设后端返回结构正确
                         user: parsed.user as never,
-                        token: parsed.token,
                     }),
                 );
             }

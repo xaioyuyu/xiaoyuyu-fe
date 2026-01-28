@@ -32,7 +32,9 @@ export default function RootLayout({
       >
         <AppProviders>
           <GlobalHeader />
-          <main className="flex-1 overflow-hidden">{children}</main>
+          <main className="flex-1 flex flex-col overflow-hidden min-h-0">
+            {children}
+          </main>
           <GlobalFooter />
         </AppProviders>
       </body>

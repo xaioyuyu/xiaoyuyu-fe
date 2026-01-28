@@ -1,6 +1,6 @@
 export default function Home() {
   return (
-    <div className="flex h-full flex-col bg-slate-50">
+    <div className="flex flex-1 flex-col bg-slate-50">
       {/* Hero 区：系统简介 */}
       <section className="mx-auto flex max-w-6xl flex-1 flex-col gap-8 px-4 py-10 md:flex-row md:items-center md:justify-between">
         <div className="max-w-xl space-y-6">
@@ -87,7 +87,7 @@ export default function Home() {
                   <div className="h-2 w-[26%] rounded-full bg-emerald-300" />
                 </div>
               </div>
-    <div>
+              <div>
                 <div className="mb-1 flex justify-between text-[11px] text-slate-500">
                   <span>其他</span>
                   <span>18%</span>
