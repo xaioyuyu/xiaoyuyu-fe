@@ -1,4 +1,14 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+
 export default function Home() {
+  const router = useRouter();
+
+  const goToRecords = () => {
+    router.push('/records');
+  };
+
   return (
     <div className="flex flex-1 flex-col bg-slate-50">
       {/* Hero 区：系统简介 */}
@@ -15,7 +25,10 @@ export default function Home() {
             自动聚合日常收支数据，智能分类并生成多维度消费分析报告，帮助你洞察消费习惯、制定理性预算，真正掌控每一分钱的去向。
           </p>
           <div className="flex flex-wrap gap-3">
-            <button className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700">
+            <button
+              className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700"
+              onClick={goToRecords}
+            >
               立即开始记账
             </button>
             <button className="rounded-md border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-800 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700">

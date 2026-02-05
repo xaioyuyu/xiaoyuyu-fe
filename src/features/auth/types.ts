@@ -6,4 +6,5 @@ export type AuthUser = {
     username: string;
     email: string;
     avatarUrl?: string;
+    role?: 'user' | 'admin'; // 用户角色
 };
