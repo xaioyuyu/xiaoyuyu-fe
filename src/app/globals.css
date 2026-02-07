@@ -1,5 +1,26 @@
 @import "tailwindcss";
 
+/* 防止样式闪烁：初始隐藏，等 antd 样式加载完成后再显示 */
+body {
+  visibility: hidden;
+  transition: visibility 0s;
+}
+
+body.antd-ready {
+  visibility: visible;
+}
+
+/* 防止 antd 组件样式闪烁 */
+.ant-btn,
+.ant-input,
+.ant-select,
+.ant-picker,
+.ant-card,
+.ant-table,
+.ant-form-item {
+  opacity: 1 !important;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

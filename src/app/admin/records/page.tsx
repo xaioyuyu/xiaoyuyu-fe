@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, Table, DatePicker, Select, Input, InputNumber, Button, message, Tag } from 'antd';
 import { SearchOutlined, HomeOutlined } from '@ant-design/icons';
-import dayjs, { type Dayjs } from 'dayjs';
+import dayjs, { type Dayjs } from '@/lib/utils/dayjs';
 import { recordsApi } from '@/features/records/api';
 import type { RecordsListData, RecordItem, RecordType } from '@/features/records/types';
 

@@ -1,219 +1,117 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, Table, DatePicker, Input, Button, Space, message, Modal, Tag } from 'antd';
-import type { ColumnsType } from 'antd/es/table';
-import dayjs, { type Dayjs } from 'dayjs';
-import { recordsApi, type GetRecordsParams } from '@/features/records/api';
-import type { RecordItem, RecordsListData } from '@/features/records/types';
+import { Card, Button, Row, Col } from 'antd';
+import {
+    DashboardOutlined,
+    UnorderedListOutlined,
+    AppstoreOutlined,
+    TagsOutlined,
+    PlusOutlined,
+} from '@ant-design/icons';
 
-const DEFAULT_PAGE_SIZE = 20;
-
-export default function RecordsListPage() {
+export default function RecordsIndexPage() {
     const router = useRouter();
-    const [filters, setFilters] = useState<GetRecordsParams>({
-        page: 1,
-        page_size: DEFAULT_PAGE_SIZE,
-    });
-    const [data, setData] = useState<RecordsListData | null>(null);
-    const [loading, setLoading] = useState(false);
 
-    const fetchData = async (params: GetRecordsParams) => {
-        try {
-            setLoading(true);
-            const res = await recordsApi.getRecords(params);
-            setData(res);
-        } catch (e) {
-            const msg = e instanceof Error ? e.message : '加载记录失败，请稍后重试';
-            message.error(msg);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        void fetchData(filters);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filters.page, filters.page_size, filters.start_date, filters.end_date, filters.keyword]);
-
-    const handleFilterChange = (field: keyof GetRecordsParams, value: unknown) => {
-        setFilters((prev) => ({
-            ...prev,
-            [field]: value,
-            page: 1,
-        }));
-    };
-
-    const handleDelete = async (record: RecordItem) => {
-        Modal.confirm({
-            title: '确认删除',
-            content: '确认删除该记录吗？',
-            okText: '确认',
-            cancelText: '取消',
-            onOk: async () => {
-                try {
-                    await recordsApi.deleteRecord({ id: record.id });
-                    message.success('删除成功');
-                    void fetchData(filters);
-                } catch (e) {
-                    const msg = e instanceof Error ? e.message : '删除失败，请稍后重试';
-                    message.error(msg);
-                }
-            },
-        });
-    };
-
-    const columns: ColumnsType<RecordItem> = [
+    const menuItems = [
         {
-            title: '日期',
-            dataIndex: 'occurred_at',
-            key: 'occurred_at',
-            width: 180,
-            render: (date: string) => dayjs(date).format('YYYY-MM-DD HH:mm'),
+            key: 'dashboard',
+            title: '仪表盘',
+            description: '查看数据统计和趋势分析',
+            icon: <DashboardOutlined style={{ fontSize: 48, color: '#10b981' }} />,
+            path: '/dashboard',
+            color: 'bg-emerald-50 hover:bg-emerald-100',
         },
         {
-            title: '分类',
-            dataIndex: 'category_name',
-            key: 'category_name',
-            render: (name: string, record: RecordItem) => name || record.category_id,
+            key: 'list',
+            title: '账目列表',
+            description: '查看和管理所有记账记录',
+            icon: <UnorderedListOutlined style={{ fontSize: 48, color: '#3b82f6' }} />,
+            path: '/records/list',
+            color: 'bg-blue-50 hover:bg-blue-100',
         },
         {
-            title: '金额',
-            dataIndex: 'amount',
-            key: 'amount',
-            align: 'right',
-            width: 120,
-            render: (amount: string) => (
-                <span className="font-semibold">￥{amount}</span>
-            ),
+            key: 'categories',
+            title: '分类管理',
+            description: '管理收支分类和标签',
+            icon: <AppstoreOutlined style={{ fontSize: 48, color: '#f59e0b' }} />,
+            path: '/categories',
+            color: 'bg-amber-50 hover:bg-amber-100',
         },
         {
-            title: '备注',
-            dataIndex: 'remark',
-            key: 'remark',
-            ellipsis: true,
-            render: (remark: string) => remark || '-',
-        },
-        {
-            title: '操作',
-            key: 'action',
-            width: 180,
-            render: (_: unknown, record: RecordItem) => (
-                <Space size="small">
-                    <Button
-                        type="link"
-                        size="small"
-                        className="cursor-pointer p-0"
-                        onClick={() => router.push(`/records/${record.id}`)}
-                    >
-                        查看
-                    </Button>
-                    <Button
-                        type="link"
-                        size="small"
-                        className="cursor-pointer p-0"
-                        onClick={() => router.push(`/records/${record.id}/edit`)}
-                    >
-                        编辑
-                    </Button>
-                    <Button
-                        type="link"
-                        size="small"
-                        danger
-                        className="cursor-pointer p-0"
-                        onClick={() => void handleDelete(record)}
-                    >
-                        删除
-                    </Button>
-                </Space>
-            ),
+            key: 'tags',
+            title: '标签管理',
+            description: '管理记账标签',
+            icon: <TagsOutlined style={{ fontSize: 48, color: '#8b5cf6' }} />,
+            path: '/tags',
+            color: 'bg-purple-50 hover:bg-purple-100',
         },
     ];
 
     return (
-        <div className="flex h-full flex-1 flex-col gap-4 bg-slate-50 p-4">
-            <Card
-                title="账目记录"
-                extra={
-                    <Button
-                        type="primary"
-                        className="cursor-pointer"
-                        onClick={() => router.push('/records/new')}
-                    >
-                        记一笔
-                    </Button>
-                }
-            >
-                <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div>
-                        <label className="mb-1 block text-xs text-slate-500">起始日期</label>
-                        <DatePicker
-                            className="w-full"
-                            format="YYYY-MM-DD"
-                            value={filters.start_date ? dayjs(filters.start_date) : null}
-                            onChange={(date: Dayjs | null) =>
-                                handleFilterChange('start_date', date ? date.format('YYYY-MM-DD') : undefined)
-                            }
-                            allowClear
-                        />
-                    </div>
-                    <div>
-                        <label className="mb-1 block text-xs text-slate-500">结束日期</label>
-                        <DatePicker
-                            className="w-full"
-                            format="YYYY-MM-DD"
-                            value={filters.end_date ? dayjs(filters.end_date) : null}
-                            onChange={(date: Dayjs | null) =>
-                                handleFilterChange('end_date', date ? date.format('YYYY-MM-DD') : undefined)
-                            }
-                            allowClear
-                        />
-                    </div>
-                    <div>
-                        <label className="mb-1 block text-xs text-slate-500">备注关键字</label>
-                        <Input
-                            placeholder="例如：午饭、房租"
-                            value={filters.keyword ?? ''}
-                            onChange={(e) => handleFilterChange('keyword', e.target.value || undefined)}
-                            allowClear
-                        />
-                    </div>
+        <div className="flex flex-1 flex-col bg-slate-50">
+            <div className="mx-auto w-full max-w-6xl space-y-6 p-6">
+                {/* 顶部标题区 */}
+                <div className="text-center">
+                    <h1 className="text-3xl font-bold text-gray-900">记账中心</h1>
+                    <p className="mt-2 text-base text-gray-600">管理您的收支记录和财务数据</p>
                 </div>
 
-                <div className="mb-4 flex items-center justify-between">
-                    <div className="text-sm text-slate-600">
-                        合计金额：{' '}
-                        <Tag color="blue" className="font-semibold">
-                            ￥{data?.summary?.total_amount ?? '0.00'}
-                        </Tag>
-                    </div>
-                </div>
+                {/* 主要功能入口网格 */}
+                <Row gutter={[24, 24]}>
+                    {menuItems.map((item) => (
+                        <Col xs={24} sm={12} lg={6} key={item.key}>
+                            <Card
+                                hoverable
+                                className={`h-full cursor-pointer transition-all duration-300 ${item.color} border-2 border-transparent hover:border-emerald-300`}
+                                onClick={() => router.push(item.path)}
+                                bodyStyle={{ padding: '32px 24px' }}
+                            >
+                                <div className="flex flex-col items-center text-center">
+                                    <div className="mb-4 transition-transform duration-300 hover:scale-110">
+                                        {item.icon}
+                                    </div>
+                                    <h3 className="mb-2 text-xl font-semibold text-gray-900">{item.title}</h3>
+                                    <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
+                                </div>
+                            </Card>
+                        </Col>
+                    ))}
+                </Row>
 
-                <Table
-                    columns={columns}
-                    dataSource={data?.list || []}
-                    rowKey="id"
-                    loading={loading}
-                    pagination={{
-                        current: filters.page ?? 1,
-                        pageSize: filters.page_size ?? DEFAULT_PAGE_SIZE,
-                        total: data?.pagination.total ?? 0,
-                        showTotal: (total) => `共 ${total} 条记录`,
-                        showSizeChanger: true,
-                        showQuickJumper: true,
-                        onChange: (page, pageSize) => {
-                            setFilters((prev) => ({
-                                ...prev,
-                                page,
-                                page_size: pageSize,
-                            }));
-                        },
-                    }}
-                />
-            </Card>
+                {/* 快捷操作区 */}
+                <Card className="border-emerald-100 bg-emerald-50/50">
+                    <div className="flex flex-col items-center gap-4">
+                        <h3 className="text-lg font-semibold text-gray-900">快速开始</h3>
+                        <div className="flex flex-wrap justify-center gap-3">
+                            <Button
+                                type="primary"
+                                size="large"
+                                icon={<PlusOutlined />}
+                                onClick={() => router.push('/records/new')}
+                                className="bg-emerald-600 hover:bg-emerald-700 h-12 px-8 text-base"
+                            >
+                                立即记账
+                            </Button>
+                            <Button
+                                size="large"
+                                onClick={() => router.push('/records/list')}
+                                className="h-12 px-8 text-base"
+                            >
+                                查看记录
+                            </Button>
+                            <Button
+                                size="large"
+                                onClick={() => router.push('/dashboard')}
+                                className="h-12 px-8 text-base"
+                            >
+                                数据统计
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
+            </div>
         </div>
     );
 }
-
 

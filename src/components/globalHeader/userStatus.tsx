@@ -8,7 +8,7 @@ import { useAuth } from '@/features/auth/hooks';
 // 右侧用户状态子组件
 const UserStatus = () => {
     const router = useRouter();
-    const { user, isAuthenticated, logout, loading } = useAuth();
+    const { user, isAuthenticated, logout, loading, hydrated } = useAuth();
 
     const handleGoAuth = () => {
         router.push('/auth');
@@ -24,6 +24,15 @@ const UserStatus = () => {
         }
     };
 
+    // 未 hydrated 时，显示 loading 状态，避免状态闪烁
+    if (!hydrated) {
+        return (
+            <Button type="primary" loading>
+                加载中
+            </Button>
+        );
+    }
+
     // 已登录状态
     if (isAuthenticated && user) {
         const menuItems: MenuProps['items'] = [
@@ -33,11 +42,11 @@ const UserStatus = () => {
             },
             ...(user.role === 'admin'
                 ? [
-                      {
-                          key: 'admin',
-                          label: '后台管理',
-                      },
-                  ]
+                    {
+                        key: 'admin',
+                        label: '后台管理',
+                    },
+                ]
                 : []),
         ];
 

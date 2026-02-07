@@ -284,8 +284,8 @@ export const getRecordsSummary = async (
 ): Promise<RecordsSummaryData> => {
     return httpRequest<RecordsSummaryData>({
         url: '/api/records/summary',
-        method: 'GET',
-        params,
+        method: 'POST',
+        data: params,
     });
 };
 
@@ -300,8 +300,8 @@ export const getRecordsSummaryByCategory = async (
 ): Promise<RecordsSummaryByCategoryData> => {
     return httpRequest<RecordsSummaryByCategoryData>({
         url: '/api/records/summary-by-category',
-        method: 'GET',
-        params,
+        method: 'POST',
+        data: params,
     });
 };
 

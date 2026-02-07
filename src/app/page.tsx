@@ -1,5 +1,6 @@
 'use client';
 
+import { Button, Card } from 'antd';
 import { useRouter } from 'next/navigation';
 
 export default function Home() {
@@ -25,15 +26,20 @@ export default function Home() {
             自动聚合日常收支数据，智能分类并生成多维度消费分析报告，帮助你洞察消费习惯、制定理性预算，真正掌控每一分钱的去向。
           </p>
           <div className="flex flex-wrap gap-3">
-            <button
-              className="rounded-md bg-emerald-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700"
+            <Button
+              type="primary"
+              size="middle"
+              className="bg-emerald-600 hover:bg-emerald-700"
               onClick={goToRecords}
             >
               立即开始记账
-            </button>
-            <button className="rounded-md border border-slate-200 bg-white px-5 py-2 text-sm font-medium text-slate-800 shadow-sm transition hover:border-emerald-200 hover:text-emerald-700">
+            </Button>
+            <Button
+              size="middle"
+              className="border-slate-200 text-slate-800 hover:border-emerald-200 hover:text-emerald-700"
+            >
               查看分析示例
-            </button>
+            </Button>
           </div>
           <div className="flex flex-wrap gap-6 text-xs text-slate-500 md:text-sm">
             <div>
@@ -48,8 +54,7 @@ export default function Home() {
         </div>
 
         {/* 右侧：数据概览卡片（静态示意） */}
-        <div className="mt-6 w-full max-w-md rounded-2xl bg-white p-5 shadow-md md:mt-0">
-          <h2 className="mb-4 text-sm font-semibold text-slate-800">本月消费概览（示例）</h2>
+        <Card className="mt-6 w-full max-w-md md:mt-0" title="本月消费概览（示例）">
           <div className="mb-4 grid grid-cols-2 gap-3 text-xs md:text-sm">
             <div className="rounded-lg bg-emerald-50 p-3">
               <p className="text-slate-500">本月总支出</p>
@@ -111,7 +116,7 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
       </section>
 
       {/* 功能亮点区 */}
@@ -125,24 +130,24 @@ export default function Home() {
           </p>
 
           <div className="mt-8 grid gap-6 md:grid-cols-3">
-            <div className="rounded-xl border border-slate-100 bg-slate-50 p-5">
+            <Card className="border-slate-100 bg-slate-50">
               <p className="text-sm font-semibold text-slate-900">多渠道数据录入</p>
               <p className="mt-2 text-xs text-slate-600 md:text-sm">
                 支持手动记账、模板导入等多种录入方式，适配不同使用习惯，保证数据完整性。
               </p>
-            </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50 p-5">
+            </Card>
+            <Card className="border-slate-100 bg-slate-50">
               <p className="text-sm font-semibold text-slate-900">智能分类与标签</p>
               <p className="mt-2 text-xs text-slate-600 md:text-sm">
                 基于规则与模型对账单进行自动分类与打标，减少重复操作，让记账更接近「一键完成」。
               </p>
-            </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50 p-5">
+            </Card>
+            <Card className="border-slate-100 bg-slate-50">
               <p className="text-sm font-semibold text-slate-900">可视化消费分析</p>
               <p className="mt-2 text-xs text-slate-600 md:text-sm">
                 提供按月度、类别、场景等维度的图表分析，帮助你快速发现高支出领域与节省空间。
               </p>
-            </div>
+            </Card>
           </div>
         </div>
       </section>

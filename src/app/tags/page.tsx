@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, Table, Button, Modal, Form, Input, message, Popconfirm, Tag, ColorPicker } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { recordsApi } from '@/features/records/api';
 import type { Tag as TagType } from '@/features/records/types';
 
 export default function TagsPage() {
+    const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [tags, setTags] = useState<TagType[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -150,6 +152,14 @@ export default function TagsPage() {
     return (
         <div className="flex flex-1 flex-col bg-slate-50 p-6">
             <div className="mx-auto w-full max-w-7xl">
+                <Button
+                    type="text"
+                    icon={<ArrowLeftOutlined />}
+                    onClick={() => router.push('/records')}
+                    className="mb-4"
+                >
+                    返回记账中心
+                </Button>
                 <Card
                     title="标签管理"
                     extra={

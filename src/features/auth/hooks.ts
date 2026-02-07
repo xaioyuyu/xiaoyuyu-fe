@@ -9,10 +9,16 @@ export const useAuth = () => {
     const authState = useAppSelector((state) => state.auth);
 
     // 从 localStorage 恢复登录态，只在客户端首次挂载时执行
+    // 注意：如果已经在 AppProviders 中初始化，这里可以跳过
     useEffect(() => {
+        // 如果已经 hydrated，不再重复初始化
+        if (authState.hydrated) return;
         if (typeof window === 'undefined') return;
         const stored = window.localStorage.getItem('auth');
-        if (!stored) return;
+        if (!stored) {
+            dispatch(hydrateFromStorage(null));
+            return;
+        }
         try {
             const parsed = JSON.parse(stored) as { user: unknown };
             if (parsed.user) {
@@ -22,11 +28,13 @@ export const useAuth = () => {
                         user: parsed.user as never,
                     }),
                 );
+            } else {
+                dispatch(hydrateFromStorage(null));
             }
         } catch {
-            // ignore
+            dispatch(hydrateFromStorage(null));
         }
-    }, [dispatch]);
+    }, [dispatch, authState.hydrated]);
 
     const wrappedLogin = useCallback(
         (payload: Parameters<typeof login>[0]) => dispatch(login(payload)).unwrap(),

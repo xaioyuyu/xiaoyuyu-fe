@@ -1,48 +1,56 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, DatePicker, Select, Button, Spin, message } from 'antd';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
+import { Card, Select, Button, Spin, message, Radio, DatePicker } from 'antd';
+import { ArrowLeftOutlined } from '@ant-design/icons';
+import ReactECharts from 'echarts-for-react';
+import dayjs, { type Dayjs } from '@/lib/utils/dayjs';
+import { utcToCST } from '@/lib/utils';
 import { recordsApi } from '@/features/records/api';
-import type { RecordsSummaryData, RecordsSummaryByCategoryData, RecordsListData } from '@/features/records/types';
+import type {
+    RecordsSummaryData,
+    RecordsSummaryByCategoryData,
+    RecordsListData,
+    RecordItem,
+} from '@/features/records/types';
 
-const { RangePicker } = DatePicker;
 const { Option } = Select;
 
-type TimeRange = 'today' | 'week' | 'month' | 'custom';
+type TimeDimension = 'year' | 'month' | 'day';
 
 export default function DashboardPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [timeRange, setTimeRange] = useState<TimeRange>('month');
-    const [customDates, setCustomDates] = useState<[Dayjs, Dayjs] | null>(null);
+    const [timeDimension, setTimeDimension] = useState<TimeDimension>('month');
     const [typeId, setTypeId] = useState<number | undefined>(undefined);
+
+    // 选择的日期/月份/年份
+    const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
 
     // 统计数据
     const [summary, setSummary] = useState<RecordsSummaryData | null>(null);
     const [categorySummary, setCategorySummary] = useState<RecordsSummaryByCategoryData | null>(null);
     const [recordsData, setRecordsData] = useState<RecordsListData | null>(null);
     const [recordTypes, setRecordTypes] = useState<Array<{ id: number; name: string }>>([]);
+    const [allRecords, setAllRecords] = useState<RecordItem[]>([]); // 用于按小时统计
 
     // 计算日期范围
     const getDateRange = (): [string, string] => {
-        const today = dayjs();
+        const baseDate = selectedDate || dayjs();
         let start: Dayjs;
-        let end: Dayjs = today;
+        let end: Dayjs;
 
-        if (timeRange === 'today') {
-            start = today.startOf('day');
-        } else if (timeRange === 'week') {
-            start = today.startOf('week');
-        } else if (timeRange === 'month') {
-            start = today.startOf('month');
-        } else if (timeRange === 'custom' && customDates) {
-            start = customDates[0].startOf('day');
-            end = customDates[1].endOf('day');
+        if (timeDimension === 'year') {
+            start = baseDate.startOf('year');
+            end = baseDate.endOf('year');
+        } else if (timeDimension === 'month') {
+            start = baseDate.startOf('month');
+            end = baseDate.endOf('month');
         } else {
-            start = today.startOf('month');
+            // day
+            start = baseDate.startOf('day');
+            end = baseDate.endOf('day');
         }
 
         return [start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD')];
@@ -59,7 +67,7 @@ export default function DashboardPage() {
                 recordsApi.getRecordsSummary({
                     start_date: startDate,
                     end_date: endDate,
-                    group_by: 'day',
+                    group_by: timeDimension === 'year' ? 'month' : 'day',
                     ...(typeId && { type_id: typeId }),
                 }),
                 recordsApi.getRecordsSummaryByCategory({
@@ -81,6 +89,22 @@ export default function DashboardPage() {
             setSummary(summaryRes);
             setCategorySummary(categoryRes);
             setRecordsData(recordsRes);
+
+            // 如果是按日视图，需要获取所有记录用于按小时统计
+            if (timeDimension === 'day') {
+                const allRecordsRes = await recordsApi.getRecords({
+                    page: 1,
+                    page_size: 1000, // 获取足够多的记录
+                    start_date: startDate,
+                    end_date: endDate,
+                    order_by: 'occurred_at',
+                    order: 'asc',
+                    ...(typeId && typeId !== 0 && { type_id: typeId }),
+                });
+                setAllRecords(allRecordsRes.list || []);
+            } else {
+                setAllRecords([]);
+            }
         } catch (error) {
             console.error('加载数据失败', error);
             message.error('加载数据失败，请稍后重试');
@@ -94,7 +118,8 @@ export default function DashboardPage() {
         const loadRecordTypes = async () => {
             try {
                 const types = await recordsApi.getRecordTypes();
-                setRecordTypes(types.list);
+                const newTypes = [...types.list, { id: 0, name: '全部' }];
+                setRecordTypes(newTypes);
             } catch (error) {
                 console.error('加载记录类型失败', error);
             }
@@ -106,7 +131,88 @@ export default function DashboardPage() {
     useEffect(() => {
         loadData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [timeRange, customDates, typeId]);
+    }, [timeDimension, typeId, selectedDate]);
+
+    // 处理时间维度变化
+    const handleTimeDimensionChange = (value: TimeDimension) => {
+        setTimeDimension(value);
+        // 切换时间维度时，重置为当前时间对应的默认值
+        const now = dayjs();
+        if (value === 'year') {
+            // 切换到年视图时，默认选择当前年份
+            setSelectedDate(now.startOf('year'));
+        } else if (value === 'month') {
+            // 切换到月视图时，默认选择当前年月
+            setSelectedDate(now.startOf('month'));
+        } else {
+            // 切换到日视图时，默认选择当前日期
+            setSelectedDate(now.startOf('day'));
+        }
+    };
+
+    // 处理日期选择变化
+    const handleDateChange = (date: Dayjs | null) => {
+        if (date) {
+            setSelectedDate(date);
+        }
+    };
+
+    // 处理趋势图数据
+    const trendChartData = useMemo(() => {
+        if (!summary || !summary.items.length) {
+            return { xAxis: [], series: [] };
+        }
+
+        if (timeDimension === 'year') {
+            // 年视图：横坐标显示月份（1月-12月）
+            const monthData = new Array(12).fill(0);
+            summary.items.forEach((item) => {
+                const month = dayjs(item.date).month(); // 0-11
+                monthData[month] += item.total_amount;
+            });
+
+            return {
+                xAxis: Array.from({ length: 12 }, (_, i) => `${i + 1}月`),
+                series: monthData,
+            };
+        } else if (timeDimension === 'month') {
+            // 月视图：横坐标显示日期（1日-31日/30日/28日）
+            const baseDate = selectedDate || dayjs();
+            const daysInMonth = baseDate.daysInMonth();
+            const dayData = new Array(daysInMonth).fill(0);
+
+            summary.items.forEach((item) => {
+                const day = dayjs(item.date).date(); // 1-31
+                if (day >= 1 && day <= daysInMonth) {
+                    dayData[day - 1] += item.total_amount;
+                }
+            });
+
+            return {
+                xAxis: Array.from({ length: daysInMonth }, (_, i) => `${i + 1}日`),
+                series: dayData,
+            };
+        } else {
+            // 日视图：横坐标显示小时（0时-23时）
+            const hourData = new Array(24).fill(0);
+            // 使用 allRecords 按小时聚合数据
+            allRecords.forEach((record) => {
+                const hour = dayjs(record.occurred_at).hour(); // 0-23
+                // 根据 type_id 决定金额的正负：1为支出（负），2为收入（正）
+                let amount = record.amount;
+                if (typeof record.amount === 'string') {
+                    amount = Number(record.amount);
+                }
+                // const amount = record.type_id === 1 ? -record.amount : record.amount;
+                hourData[hour] += amount;
+            });
+
+            return {
+                xAxis: Array.from({ length: 24 }, (_, i) => `${i}时`),
+                series: hourData,
+            };
+        }
+    }, [summary, timeDimension, allRecords, selectedDate]);
 
     // 计算总支出、总收入、结余
     const calculateTotals = () => {
@@ -116,11 +222,15 @@ export default function DashboardPage() {
         let income = 0;
 
         recordsData.list.forEach((record) => {
-            // 假设 type_id 1 是支出，2 是收入（需要根据实际后端定义调整）
+            let amount = record.amount;
+            if (typeof record.amount === 'string') {
+                amount = Number(record.amount);
+            }
+            // 假设 type_id 1 是支出，2 是收入
             if (record.type_id === 1) {
-                expense += record.amount;
+                expense += amount;
             } else if (record.type_id === 2) {
-                income += record.amount;
+                income += amount;
             }
         });
 
@@ -133,53 +243,216 @@ export default function DashboardPage() {
 
     const totals = calculateTotals();
 
-    // 处理时间范围变化
-    const handleTimeRangeChange = (value: TimeRange) => {
-        setTimeRange(value);
-        if (value !== 'custom') {
-            setCustomDates(null);
-        }
-    };
+    // 趋势图配置
+    const trendChartOption = useMemo(() => {
+        return {
+            title: {
+                text: '趋势图',
+                left: 'center',
+                textStyle: {
+                    fontSize: 16,
+                    fontWeight: 'normal',
+                },
+            },
+            tooltip: {
+                trigger: 'axis',
+                formatter: (params: unknown) => {
+                    const param = Array.isArray(params) ? params[0] : params;
+                    if (param && typeof param === 'object' && 'name' in param && 'value' in param) {
+                        return `${param.name}<br/>金额: ¥${param.value}`;
+                    }
+                    return '';
+                },
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '10%',
+                containLabel: true,
+            },
+            xAxis: {
+                type: 'category',
+                data: trendChartData.xAxis,
+                axisLabel: {
+                    rotate: timeDimension === 'day' ? 45 : 0,
+                    interval: timeDimension === 'day' ? 1 : 'auto',
+                },
+            },
+            yAxis: {
+                type: 'value',
+                axisLabel: {
+                    formatter: (value: number) => `¥${value}`,
+                },
+            },
+            series: [
+                {
+                    name: '金额',
+                    type: 'line',
+                    data: trendChartData.series,
+                    smooth: true,
+                    itemStyle: {
+                        color: '#10b981',
+                    },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0,
+                            y: 0,
+                            x2: 0,
+                            y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(16, 185, 129, 0.3)' },
+                                { offset: 1, color: 'rgba(16, 185, 129, 0.1)' },
+                            ],
+                        },
+                    },
+                },
+            ],
+        };
+    }, [trendChartData, timeDimension]);
 
-    // 处理自定义日期范围变化
-    const handleCustomDateChange = (
-        dates: [Dayjs | null, Dayjs | null] | null,
-    ) => {
-        if (dates && dates[0] && dates[1]) {
-            setTimeRange('custom');
-            setCustomDates([dates[0], dates[1]]);
-        } else {
-            setCustomDates(null);
+    // 分类占比图配置
+    const categoryChartOption = useMemo(() => {
+        if (!categorySummary || !categorySummary.items.length) {
+            return null;
         }
-    };
+
+        const colors = [
+            '#10b981',
+            '#3b82f6',
+            '#f59e0b',
+            '#ef4444',
+            '#8b5cf6',
+            '#ec4899',
+            '#06b6d4',
+            '#84cc16',
+            '#f97316',
+            '#6366f1',
+        ];
+
+        return {
+            title: {
+                text: '分类占比',
+                left: 'center',
+                textStyle: {
+                    fontSize: 16,
+                    fontWeight: 'normal',
+                },
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: (params: unknown) => {
+                    if (params && typeof params === 'object' && 'name' in params && 'value' in params && 'percent' in params) {
+                        return `${params.name}<br/>金额: ¥${params.value}<br/>占比: ${params.percent}%`;
+                    }
+                    return '';
+                },
+            },
+            legend: {
+                orient: 'vertical',
+                left: 'left',
+                top: 'middle',
+                formatter: (name: string) => {
+                    const item = categorySummary.items.find((i) => i.category_name === name);
+                    return item ? `${name} (${(item.percent * 100).toFixed(2)}%)` : name;
+                },
+            },
+            series: [
+                {
+                    name: '分类占比',
+                    type: 'pie',
+                    radius: ['40%', '70%'], // 环形图
+                    center: ['60%', '50%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: {
+                        borderRadius: 10,
+                        borderColor: '#fff',
+                        borderWidth: 2,
+                    },
+                    label: {
+                        show: false,
+                        position: 'center',
+                    },
+                    emphasis: {
+                        label: {
+                            show: true,
+                            fontSize: 20,
+                            fontWeight: 'bold',
+                        },
+                    },
+                    labelLine: {
+                        show: false,
+                    },
+                    data: categorySummary.items.map((item, index) => ({
+                        value: item.total_amount,
+                        name: item.category_name,
+                        itemStyle: {
+                            color: colors[index % colors.length],
+                        },
+                    })),
+                },
+            ],
+        };
+    }, [categorySummary]);
 
     return (
         <div className="flex flex-1 flex-col bg-slate-50 p-6">
             <div className="mx-auto w-full max-w-7xl space-y-6">
+                {/* 返回按钮 */}
+                <Button
+                    type="text"
+                    icon={<ArrowLeftOutlined />}
+                    onClick={() => router.push('/records')}
+                    className="mb-2"
+                >
+                    返回记账中心
+                </Button>
+
                 {/* 顶部筛选区 */}
                 <Card>
                     <div className="flex flex-wrap items-center gap-4">
                         <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">时间范围：</span>
-                            <Select
-                                value={timeRange}
-                                onChange={handleTimeRangeChange}
-                                style={{ width: 120 }}
+                            <span className="text-sm text-gray-600">时间维度：</span>
+                            <Radio.Group
+                                value={timeDimension}
+                                onChange={(e) => handleTimeDimensionChange(e.target.value)}
+                                buttonStyle="solid"
                             >
-                                <Option value="today">今天</Option>
-                                <Option value="week">本周</Option>
-                                <Option value="month">本月</Option>
-                                <Option value="custom">自定义</Option>
-                            </Select>
+                                <Radio.Button value="year">年</Radio.Button>
+                                <Radio.Button value="month">月</Radio.Button>
+                                <Radio.Button value="day">日</Radio.Button>
+                            </Radio.Group>
                         </div>
 
-                        {timeRange === 'custom' && (
-                            <RangePicker
-                                value={customDates}
-                                onChange={handleCustomDateChange}
-                                format="YYYY-MM-DD"
-                            />
-                        )}
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-600">
+                                {timeDimension === 'year' ? '选择年份：' : timeDimension === 'month' ? '选择月份：' : '选择日期：'}
+                            </span>
+                            {timeDimension === 'year' ? (
+                                <DatePicker
+                                    picker="year"
+                                    value={selectedDate}
+                                    onChange={handleDateChange}
+                                    format="YYYY年"
+                                    style={{ width: 120 }}
+                                />
+                            ) : timeDimension === 'month' ? (
+                                <DatePicker
+                                    picker="month"
+                                    value={selectedDate}
+                                    onChange={handleDateChange}
+                                    format="YYYY-MM"
+                                    style={{ width: 140 }}
+                                />
+                            ) : (
+                                <DatePicker
+                                    value={selectedDate}
+                                    onChange={handleDateChange}
+                                    format="YYYY-MM-DD"
+                                    style={{ width: 140 }}
+                                />
+                            )}
+                        </div>
 
                         <div className="flex items-center gap-2">
                             <span className="text-sm text-gray-600">类型：</span>
@@ -188,7 +461,7 @@ export default function DashboardPage() {
                                 onChange={setTypeId}
                                 allowClear
                                 style={{ width: 120 }}
-                                placeholder="全部"
+                                defaultValue={0}
                             >
                                 {recordTypes.map((type) => (
                                     <Option key={type.id} value={type.id}>
@@ -246,28 +519,33 @@ export default function DashboardPage() {
                             </Card>
                         </div>
 
+                        {/* 图表区域 */}
                         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                             {/* 趋势图 */}
-                            <Card title="趋势图（按日）">
-                                {summary && summary.items.length > 0 ? (
-                                    <div className="h-64">
-                                        <SimpleLineChart data={summary.items} />
-                                    </div>
+                            <Card>
+                                {trendChartData.series.length > 0 ? (
+                                    <ReactECharts
+                                        option={trendChartOption}
+                                        style={{ height: '400px', width: '100%' }}
+                                        opts={{ renderer: 'svg' }}
+                                    />
                                 ) : (
-                                    <div className="flex h-64 items-center justify-center text-gray-400">
+                                    <div className="flex h-96 items-center justify-center text-gray-400">
                                         暂无数据
                                     </div>
                                 )}
                             </Card>
 
-                            {/* 分类占比饼图 */}
-                            <Card title="分类占比">
-                                {categorySummary && categorySummary.items.length > 0 ? (
-                                    <div className="h-64">
-                                        <SimplePieChart data={categorySummary.items} />
-                                    </div>
+                            {/* 分类占比图 */}
+                            <Card>
+                                {categoryChartOption ? (
+                                    <ReactECharts
+                                        option={categoryChartOption}
+                                        style={{ height: '400px', width: '100%' }}
+                                        opts={{ renderer: 'svg' }}
+                                    />
                                 ) : (
-                                    <div className="flex h-64 items-center justify-center text-gray-400">
+                                    <div className="flex h-96 items-center justify-center text-gray-400">
                                         暂无数据
                                     </div>
                                 )}
@@ -286,7 +564,7 @@ export default function DashboardPage() {
                                         >
                                             <div className="flex items-center gap-3">
                                                 <span className="text-sm text-gray-500">
-                                                    {dayjs(record.occurred_at).format('MM-DD HH:mm')}
+                                                    {utcToCST(record.occurred_at, 'MM-DD HH:mm')}
                                                 </span>
                                                 <span className="text-sm font-medium">
                                                     {record.category_name || '未分类'}
@@ -316,117 +594,3 @@ export default function DashboardPage() {
         </div>
     );
 }
-
-// 简单的折线图组件（CSS 实现）
-function SimpleLineChart({ data }: { data: Array<{ date: string; total_amount: number }> }) {
-    if (data.length === 0) return null;
-
-    const maxAmount = Math.max(...data.map((d) => d.total_amount));
-    const minAmount = Math.min(...data.map((d) => d.total_amount));
-    const range = maxAmount - minAmount || 1;
-
-    return (
-        <div className="relative h-full w-full">
-            <svg viewBox="0 0 400 200" className="h-full w-full">
-                <polyline
-                    points={data
-                        .map(
-                            (d, i) =>
-                                `${(i / (data.length - 1 || 1)) * 380 + 10},${200 - ((d.total_amount - minAmount) / range) * 180 - 10}`,
-                        )
-                        .join(' ')}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="2"
-                />
-                {data.map((d, i) => (
-                    <circle
-                        key={i}
-                        cx={(i / (data.length - 1 || 1)) * 380 + 10}
-                        cy={200 - ((d.total_amount - minAmount) / range) * 180 - 10}
-                        r="3"
-                        fill="#10b981"
-                    />
-                ))}
-            </svg>
-            <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500">
-                <span>{data[0]?.date}</span>
-                <span>{data[data.length - 1]?.date}</span>
-            </div>
-        </div>
-    );
-}
-
-// 简单的饼图组件（CSS 实现）
-function SimplePieChart({
-    data,
-}: {
-    data: Array<{ category_name: string; total_amount: number; percent: number }>;
-}) {
-    const colors = [
-        '#10b981',
-        '#3b82f6',
-        '#f59e0b',
-        '#ef4444',
-        '#8b5cf6',
-        '#ec4899',
-        '#06b6d4',
-        '#84cc16',
-    ];
-
-    // 计算每个扇形的起始角度
-    const calculateAngles = () => {
-        let currentAngle = 0;
-        return data.map((item) => {
-            const startAngle = currentAngle;
-            const angle = item.percent * 360;
-            const endAngle = currentAngle + angle;
-            currentAngle = endAngle;
-            return { startAngle, endAngle, angle };
-        });
-    };
-
-    const angles = calculateAngles();
-
-    return (
-        <div className="flex h-full items-center gap-6">
-            <div className="relative h-48 w-48">
-                <svg viewBox="0 0 200 200" className="h-full w-full">
-                    {data.map((item, index) => {
-                        const { startAngle, endAngle, angle } = angles[index];
-
-                        const x1 = 100 + 80 * Math.cos((startAngle * Math.PI) / 180);
-                        const y1 = 100 + 80 * Math.sin((startAngle * Math.PI) / 180);
-                        const x2 = 100 + 80 * Math.cos((endAngle * Math.PI) / 180);
-                        const y2 = 100 + 80 * Math.sin((endAngle * Math.PI) / 180);
-                        const largeArc = angle > 180 ? 1 : 0;
-
-                        return (
-                            <path
-                                key={index}
-                                d={`M 100 100 L ${x1} ${y1} A 80 80 0 ${largeArc} 1 ${x2} ${y2} Z`}
-                                fill={colors[index % colors.length]}
-                                className="hover:opacity-80 cursor-pointer"
-                            />
-                        );
-                    })}
-                </svg>
-            </div>
-            <div className="flex-1 space-y-2">
-                {data.map((item, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                        <div
-                            className="h-4 w-4 rounded"
-                            style={{ backgroundColor: colors[index % colors.length] }}
-                        />
-                        <span className="text-sm text-gray-700">{item.category_name}</span>
-                        <span className="ml-auto text-sm font-medium">
-                            ¥{item.total_amount} ({(item.percent * 100)}%)
-                        </span>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
-}
-

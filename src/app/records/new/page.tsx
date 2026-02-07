@@ -1,10 +1,11 @@
 'use client';
 
+// 新建页面：直接使用统一组件逻辑
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Form, Input, InputNumber, Select, DatePicker, Button, Card, Tag, message, Spin } from 'antd';
-import type { Dayjs } from 'dayjs';
-import dayjs from 'dayjs';
+import dayjs, { type Dayjs } from '@/lib/utils/dayjs';
+import { formatCSTForBackend } from '@/lib/utils';
 import { recordsApi } from '@/features/records/api';
 import type { Category, RecordType, Tag as TagType } from '@/features/records/types';
 
@@ -17,8 +18,6 @@ type FormValues = {
   tag_ids?: number[];
 };
 
-type Mode = 'create' | 'copy';
-
 const { Option } = Select;
 const { TextArea } = Input;
 
@@ -26,9 +25,9 @@ export default function NewRecordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromId = searchParams.get('from_id');
-  const mode: Mode = fromId ? 'copy' : 'create';
-  const [form] = Form.useForm();
+  const mode = fromId ? 'copy' : 'create';
 
+  const [form] = Form.useForm();
   const [recordTypes, setRecordTypes] = useState<RecordType[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<TagType[]>([]);
@@ -37,7 +36,6 @@ export default function NewRecordPage() {
 
   const typeOptions = useMemo(() => recordTypes, [recordTypes]);
 
-  // 监听类型变化，自动清空分类选择
   const handleTypeChange = () => {
     form.setFieldsValue({ category_id: undefined });
   };
@@ -56,7 +54,6 @@ export default function NewRecordPage() {
         setTags(tagsRes.list);
 
         if (!fromId) {
-          // 新建模式：设置默认值
           const now = dayjs();
           form.setFieldsValue({
             occurred_at: now,
@@ -65,10 +62,10 @@ export default function NewRecordPage() {
           return;
         }
 
-        // 复制模式：加载原记录数据
         const detail = await recordsApi.getRecordDetail({ id: Number(fromId) });
         const record = detail.record;
-        const occurred = dayjs(record.occurred_at);
+        // 将 UTC 时间转换为中国时区的 dayjs 对象
+        const occurred = dayjs.utc(record.occurred_at).tz('Asia/Shanghai');
         form.setFieldsValue({
           type_id: record.type_id,
           amount: record.amount,
@@ -93,15 +90,15 @@ export default function NewRecordPage() {
       const values = await form.validateFields();
       setSubmitting(true);
 
-      // 将 dayjs 对象转换为 UTC ISO 字符串
+      // 将 dayjs 对象格式化为东8区时间字符串（带时区信息）
       const occurredAt = values.occurred_at as Dayjs;
-      const utcIso = occurredAt.toISOString();
+      const cstTimeString = formatCSTForBackend(occurredAt);
 
       await recordsApi.createRecord({
-        type_id: values.type_id,
-        amount: values.amount,
-        category_id: values.category_id,
-        occurred_at: utcIso,
+        type_id: values.type_id!,
+        amount: values.amount!,
+        category_id: values.category_id!,
+        occurred_at: cstTimeString,
         remark: values.remark || undefined,
         tag_ids: values.tag_ids && values.tag_ids.length > 0 ? values.tag_ids : undefined,
       });
@@ -109,7 +106,6 @@ export default function NewRecordPage() {
       message.success('保存成功');
 
       if (stayOnPage) {
-        // 保留类型和分类，清空其他字段
         form.setFieldsValue({
           amount: undefined,
           remark: undefined,
@@ -121,7 +117,6 @@ export default function NewRecordPage() {
       router.push('/records');
     } catch (e) {
       if (e && typeof e === 'object' && 'errorFields' in e) {
-        // Form 验证错误，不需要额外提示
         return;
       }
       const msg = e instanceof Error ? e.message : '保存失败，请稍后重试';
@@ -160,10 +155,7 @@ export default function NewRecordPage() {
                 name="type_id"
                 rules={[{ required: true, message: '请选择类型' }]}
               >
-                <Select
-                  placeholder="请选择类型"
-                  onChange={handleTypeChange}
-                >
+                <Select placeholder="请选择类型" onChange={handleTypeChange}>
                   {typeOptions.map((t) => (
                     <Option key={t.id} value={t.id}>
                       {t.name}
@@ -206,10 +198,7 @@ export default function NewRecordPage() {
                       name="category_id"
                       rules={[{ required: true, message: '请选择分类' }]}
                     >
-                      <Select
-                        placeholder="请选择分类"
-                        disabled={!typeId}
-                      >
+                      <Select placeholder="请选择分类" disabled={!typeId}>
                         {filteredCategories.map((c) => (
                           <Option key={c.id} value={c.id}>
                             {c.name}
@@ -279,7 +268,7 @@ export default function NewRecordPage() {
 
               <Form.Item>
                 <div className="flex items-center justify-end gap-3">
-                  <Button onClick={() => router.push('/records')} disabled={submitting}>
+                  <Button onClick={() => router.back()} disabled={submitting}>
                     取消
                   </Button>
                   <Button
@@ -306,5 +295,3 @@ export default function NewRecordPage() {
     </div>
   );
 }
-
-

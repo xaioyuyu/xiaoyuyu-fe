@@ -1,9 +1,11 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { Card, Row, Col, Statistic } from 'antd';
 import { DollarOutlined, UserOutlined, FileTextOutlined } from '@ant-design/icons';
 
 export default function AdminDashboardPage() {
+    const router = useRouter();
     return (
         <div className="flex flex-1 flex-col bg-slate-50 p-6">
             <div className="mx-auto w-full max-w-7xl space-y-6">
@@ -43,7 +45,7 @@ export default function AdminDashboardPage() {
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                         <Card
                             hoverable
-                            onClick={() => window.location.href = '/admin/record-types'}
+                            onClick={() => router.push('/admin/record-types')}
                             className="cursor-pointer"
                         >
                             <div className="text-center">
@@ -53,7 +55,7 @@ export default function AdminDashboardPage() {
                         </Card>
                         <Card
                             hoverable
-                            onClick={() => window.location.href = '/admin/categories'}
+                            onClick={() => router.push('/admin/categories')}
                             className="cursor-pointer"
                         >
                             <div className="text-center">
@@ -63,7 +65,7 @@ export default function AdminDashboardPage() {
                         </Card>
                         <Card
                             hoverable
-                            onClick={() => window.location.href = '/admin/tags'}
+                            onClick={() => router.push('/admin/tags')}
                             className="cursor-pointer"
                         >
                             <div className="text-center">
@@ -73,7 +75,7 @@ export default function AdminDashboardPage() {
                         </Card>
                         <Card
                             hoverable
-                            onClick={() => window.location.href = '/admin/users'}
+                            onClick={() => router.push('/admin/users')}
                             className="cursor-pointer"
                         >
                             <div className="text-center">
@@ -83,7 +85,7 @@ export default function AdminDashboardPage() {
                         </Card>
                         <Card
                             hoverable
-                            onClick={() => window.location.href = '/admin/records'}
+                            onClick={() => router.push('/admin/records')}
                             className="cursor-pointer"
                         >
                             <div className="text-center">
