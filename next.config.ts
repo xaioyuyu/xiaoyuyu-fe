@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // 关闭 React Strict Mode，开发环境下 useEffect 等只执行一次（默认 true 时会执行两次以帮助发现副作用问题）
+  reactStrictMode: false,
+
   // 开启生产环境的 sourceMap（用于错误追踪和调试）
   // productionBrowserSourceMaps: true,
 

@@ -7,7 +7,9 @@ import { EditOutlined, DeleteOutlined, CopyOutlined } from '@ant-design/icons';
 import dayjs, { type Dayjs } from '@/lib/utils/dayjs';
 import { formatCSTForBackend } from '@/lib/utils';
 import { recordsApi } from '@/features/records/api';
+import { aiApi } from '@/features/ai/api';
 import type { Category, RecordItem, RecordType, Tag as TagType } from '@/features/records/types';
+import MarkdownRenderer from '@/components/common/MarkdownRenderer';
 
 type FormValues = {
   type_id?: number;
@@ -48,6 +50,14 @@ export default function RecordPage() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [anomalyModalVisible, setAnomalyModalVisible] = useState(false);
+  const [anomalyData, setAnomalyData] = useState<{
+    anomaly_type: string;
+    alert_level: 'low' | 'medium' | 'high';
+    ai_message: string;
+    alert_id?: number;
+    record_id?: number;
+  } | null>(null);
 
   const typeOptions = useMemo(() => recordTypes, [recordTypes]);
 
@@ -167,6 +177,29 @@ export default function RecordPage() {
         });
         message.success('保存成功');
 
+        // 检查异常消费（仅对支出类型检查）
+        if (values.type_id === 1) {
+          try {
+            const anomalyCheck = await aiApi.checkAnomaly({
+              amount: values.amount!,
+              category_id: values.category_id!,
+              occurred_at: cstTimeString,
+            });
+            if (anomalyCheck.is_anomaly && anomalyCheck.anomaly_type && anomalyCheck.alert_level && anomalyCheck.ai_message) {
+              setAnomalyData({
+                anomaly_type: anomalyCheck.anomaly_type,
+                alert_level: anomalyCheck.alert_level,
+                ai_message: anomalyCheck.ai_message,
+                alert_id: anomalyCheck.alert_id,
+              });
+              setAnomalyModalVisible(true);
+            }
+          } catch (error) {
+            // 异常检查失败不影响正常保存流程
+            console.error('异常检查失败', error);
+          }
+        }
+
         if (stayOnPage) {
           // 保留类型和分类，清空其他字段
           form.setFieldsValue({
@@ -177,7 +210,10 @@ export default function RecordPage() {
           return;
         }
 
-        router.push('/records');
+        // 如果有异常提醒，不自动跳转，让用户先查看提醒
+        if (!anomalyModalVisible) {
+          router.push('/records');
+        }
       } else if (mode === 'edit' && id) {
         await recordsApi.updateRecord({
           id,
@@ -189,7 +225,33 @@ export default function RecordPage() {
           tag_ids: values.tag_ids && values.tag_ids.length > 0 ? values.tag_ids : undefined,
         });
         message.success('保存成功');
-        router.push(`/records/${id}`);
+
+        // 检查异常消费（仅对支出类型检查）
+        if (values.type_id === 1) {
+          try {
+            const anomalyCheck = await aiApi.checkAnomaly({
+              record_id: id,
+            });
+            if (anomalyCheck.is_anomaly && anomalyCheck.anomaly_type && anomalyCheck.alert_level && anomalyCheck.ai_message) {
+              setAnomalyData({
+                anomaly_type: anomalyCheck.anomaly_type,
+                alert_level: anomalyCheck.alert_level,
+                ai_message: anomalyCheck.ai_message,
+                alert_id: anomalyCheck.alert_id,
+                record_id: id,
+              });
+              setAnomalyModalVisible(true);
+            }
+          } catch (error) {
+            // 异常检查失败不影响正常保存流程
+            console.error('异常检查失败', error);
+          }
+        }
+
+        // 如果有异常提醒，不自动跳转，让用户先查看提醒
+        if (!anomalyModalVisible) {
+          router.push(`/records/${id}`);
+        }
       }
     } catch (e) {
       if (e && typeof e === 'object' && 'errorFields' in e) {
@@ -485,6 +547,88 @@ export default function RecordPage() {
           )}
         </Card>
       </div>
+
+      {/* 异常提醒弹窗 */}
+      <Modal
+        title="异常消费提醒"
+        open={anomalyModalVisible}
+        onCancel={() => {
+          setAnomalyModalVisible(false);
+          setAnomalyData(null);
+          if (id) {
+            router.push(`/records/${id}`);
+          } else {
+            router.push('/records');
+          }
+        }}
+        footer={[
+          <Button
+            key="mark-read"
+            onClick={async () => {
+              if (anomalyData?.alert_id) {
+                try {
+                  await aiApi.markAnomalyAlertRead({ alert_id: anomalyData.alert_id });
+                  message.success('已标记为已读');
+                } catch (error) {
+                  console.error('标记已读失败', error);
+                }
+              }
+              setAnomalyModalVisible(false);
+              setAnomalyData(null);
+              if (id) {
+                router.push(`/records/${id}`);
+              } else {
+                router.push('/records');
+              }
+            }}
+          >
+            确认
+          </Button>,
+          anomalyData?.record_id && (
+            <Button
+              key="view-detail"
+              type="primary"
+              onClick={() => {
+                setAnomalyModalVisible(false);
+                router.push(`/records/${anomalyData.record_id}`);
+              }}
+            >
+              查看详情
+            </Button>
+          ),
+        ]}
+        width={600}
+      >
+        {anomalyData && (
+          <div className="space-y-4">
+            <div>
+              <span className="text-sm text-gray-600">异常类型：</span>
+              <span className="ml-2 font-semibold">{anomalyData.anomaly_type}</span>
+            </div>
+            <div>
+              <span className="text-sm text-gray-600">严重程度：</span>
+              <Tag
+                color={
+                  anomalyData.alert_level === 'high'
+                    ? 'red'
+                    : anomalyData.alert_level === 'medium'
+                      ? 'orange'
+                      : 'blue'
+                }
+                className="ml-2"
+              >
+                {anomalyData.alert_level === 'high' ? '高' : anomalyData.alert_level === 'medium' ? '中' : '低'}
+              </Tag>
+            </div>
+            <div>
+              <span className="text-sm text-gray-600 mb-2 block">AI提醒消息：</span>
+              <div className="bg-gray-50 p-4 rounded">
+                <MarkdownRenderer content={anomalyData.ai_message} />
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

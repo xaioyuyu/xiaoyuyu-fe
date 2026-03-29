@@ -8,6 +8,8 @@ import {
     AppstoreOutlined,
     TagsOutlined,
     PlusOutlined,
+    WalletOutlined,
+    ThunderboltOutlined,
 } from '@ant-design/icons';
 
 export default function RecordsIndexPage() {
@@ -45,6 +47,22 @@ export default function RecordsIndexPage() {
             icon: <TagsOutlined style={{ fontSize: 48, color: '#8b5cf6' }} />,
             path: '/tags',
             color: 'bg-purple-50 hover:bg-purple-100',
+        },
+        {
+            key: 'budget',
+            title: '预算管理',
+            description: '设置和管理月度预算',
+            icon: <WalletOutlined style={{ fontSize: 48, color: '#6366f1' }} />,
+            path: '/budget',
+            color: 'bg-indigo-50 hover:bg-indigo-100',
+        },
+        {
+            key: 'ai-analysis',
+            title: 'AI智能分析',
+            description: '智能分析消费数据，提供个性化建议',
+            icon: <ThunderboltOutlined style={{ fontSize: 48, color: '#ec4899' }} />,
+            path: '/ai-analysis',
+            color: 'bg-pink-50 hover:bg-pink-100',
         },
     ];
 

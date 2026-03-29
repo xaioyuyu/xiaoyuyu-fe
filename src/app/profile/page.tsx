@@ -9,7 +9,7 @@ import type { AuthUser } from '@/features/auth/types';
 
 const ProfilePage = () => {
     const router = useRouter();
-    const { user: currentUser, isAuthenticated, hydrated } = useAuth();
+    const { user: currentUser, isAuthenticated, hydrated, setUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [form] = Form.useForm();
@@ -55,7 +55,6 @@ const ProfilePage = () => {
 
         // 2. 可选：在后台静默刷新一次最新的用户信息
         // void loadUserProfile();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hydrated, isAuthenticated, currentUser, userInfo, form, router]);
 
     const handleEdit = () => {
@@ -78,6 +77,7 @@ const ProfilePage = () => {
         try {
             setLoading(true);
             const { user: updatedUser } = await authApi.updateProfile(values);
+            setUser(updatedUser);
             setUserInfo(updatedUser);
             setIsEditing(false);
             message.success('保存成功');

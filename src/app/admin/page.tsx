@@ -93,6 +93,16 @@ export default function AdminDashboardPage() {
                                 <p className="mt-2 text-sm text-gray-500">全局账目查询与审计</p>
                             </div>
                         </Card>
+                        <Card
+                            hoverable
+                            onClick={() => router.push('/admin/system-config')}
+                            className="cursor-pointer"
+                        >
+                            <div className="text-center">
+                                <p className="text-lg font-semibold">系统配置</p>
+                                <p className="mt-2 text-sm text-gray-500">键值配置与启用状态</p>
+                            </div>
+                        </Card>
                     </div>
                 </Card>
             </div>

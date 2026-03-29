@@ -100,6 +100,13 @@ const authSlice = createSlice({
     clearError(state) {
       state.error = null;
     },
+    /** 更新当前用户（如资料页保存后同步全局与 localStorage，供头部等组件使用） */
+    setUser(state, action: PayloadAction<AuthUser>) {
+      state.user = action.payload;
+      if (typeof window !== 'undefined') {
+        persistAuth({ user: action.payload });
+      }
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -152,7 +159,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { hydrateFromStorage, clearError } = authSlice.actions;
+export const { hydrateFromStorage, clearError, setUser } = authSlice.actions;
 
 export default authSlice.reducer;
 

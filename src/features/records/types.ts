@@ -41,6 +41,8 @@ export type Tag = {
 // 单条记账记录（fs_records）
 export type RecordItem = {
     id: number;
+    /** 后台审计列表等场景可能返回 */
+    user_id?: number;
     type_id: number;
     amount: number;
     category_id: number;

@@ -6,6 +6,7 @@ import axios, {
     type AxiosRequestConfig,
 } from 'axios';
 import type { ApiResponse } from './types';
+import { message } from 'antd';
 
 // 后端基础地址，可根据环境变量进行调整
 const baseURL = 'http://localhost:3030';
@@ -13,7 +14,7 @@ const baseURL = 'http://localhost:3030';
 // 创建 axios 实例
 const http: AxiosInstance = axios.create({
     baseURL,
-    timeout: 10000,
+    timeout: 30000,
     withCredentials: true, // 允许跨域请求携带 cookie
 });
 
@@ -83,18 +84,18 @@ http.interceptors.request.use(
 // 响应拦截器：统一处理业务 code & 错误，以及 401 自动刷新 token
 http.interceptors.response.use(
     (response: AxiosResponse<ApiResponse<unknown> | unknown>) => {
-        const data = response.data;
+        // const data = response.data;
 
-        // 如果是约定的 ApiResponse 结构，统一按 code 判断；否则保持原样返回 response
-        if (data && typeof data === 'object' && 'code' in (data as Record<string, unknown>)) {
-            const res = data as ApiResponse<unknown>;
-            if (res.code !== 0) {
-                type ApiError = Error & { __raw?: unknown };
-                const error: ApiError = new Error(res.message || '请求失败');
-                error.__raw = res;
-                return Promise.reject(error);
-            }
-        }
+        // // 如果是约定的 ApiResponse 结构，统一按 code 判断；否则保持原样返回 response
+        // if (data && typeof data === 'object' && 'code' in (data as Record<string, unknown>)) {
+        //     const res = data as ApiResponse<unknown>;
+        //     if (res.code !== 0) {
+        //         type ApiError = Error & { __raw?: unknown };
+        //         const error: ApiError = new Error(res.message || '请求失败');
+        //         error.__raw = res;
+        //         return Promise.reject(error);
+        //     }
+        // }
 
         // 返回原始 AxiosResponse，调用方通过 response.data 使用
         // 完整的响应返回回去
@@ -140,6 +141,12 @@ export type HttpOptions = {
      * - true：返回完整 ApiResponse<T> 格式（即 { code, message, data: T }）
      */
     raw?: boolean;
+    /**
+     * 是否显示错误信息
+     * - false（默认）：不显示错误信息
+     * - true：显示错误信息
+     */
+    errorMessage?: boolean;
 };
 
 /**
@@ -158,28 +165,31 @@ export type HttpOptions = {
  * );
  * // response 类型为 ApiResponse<AuthUser>，即 { code, message, data: AuthUser }
  */
-// 函数重载：当 raw: true 时返回 ApiResponse<T>
-export function httpRequest<T>(
-    config: AxiosRequestConfig,
-    options: { raw: true },
-): Promise<ApiResponse<T>>;
 // 函数重载：当 raw: false 或未传入时返回 T
 export function httpRequest<T>(
     config: AxiosRequestConfig,
-    options?: { raw?: false } | undefined,
+    options?: { raw?: boolean, errorMessage?: boolean },
 ): Promise<T>;
 // 实现函数
 export async function httpRequest<T>(
     config: AxiosRequestConfig,
     options?: HttpOptions,
 ): Promise<ApiResponse<T> | T> {
+    const { raw = false, errorMessage = false } = options || {};
     // 响应拦截器已经处理了 code !== 0 的情况（会 reject），
     // 这里直接返回 response.data，它已经是 ApiResponse<T> 格式
     const response = await http.request<ApiResponse<T>>(config);
-    if (options?.raw) {
-        return response.data; // 返回 ApiResponse<T>
+    const data = response?.data;
+    if (data?.code === -1) {
+        if (errorMessage) {
+            message.error(data?.message || '请求失败');
+        }
+        return Promise.reject(data);
     }
-    return response.data.data; // 返回 T
+    if (raw) {
+        return data || null; // 返回 ApiResponse<T>
+    }
+    return data?.data; // 返回 T
 }
 
 export { http };

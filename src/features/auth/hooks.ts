@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect } from 'react';
+import type { AuthUser } from './types';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { clearError, hydrateFromStorage, login, logout, register } from './store';
+import { clearError, hydrateFromStorage, login, logout, register, setUser as setUserAction } from './store';
 
 export const useAuth = () => {
     const dispatch = useAppDispatch();
@@ -56,12 +57,20 @@ export const useAuth = () => {
         [dispatch],
     );
 
+    const setUser = useCallback(
+        (user: AuthUser) => {
+            dispatch(setUserAction(user));
+        },
+        [dispatch],
+    );
+
     return {
         ...authState,
         login: wrappedLogin,
         register: wrappedRegister,
         logout: wrappedLogout,
         clearError: resetError,
+        setUser,
     };
 };
 

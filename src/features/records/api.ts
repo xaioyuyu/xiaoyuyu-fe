@@ -80,8 +80,8 @@ export const getCategories = async (
 ): Promise<CategoriesListData> => {
     return httpRequest<CategoriesListData>({
         url: '/api/categories',
-        method: 'GET',
-        params,
+        method: 'POST',
+        data: params,
     });
 };
 
